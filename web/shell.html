@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Dungeon Hunter</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #101018;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        overflow: hidden;
+      }
+      canvas.emscripten {
+        border: 0px none;
+        background-color: #000;
+        image-rendering: optimizeSpeed;
+        image-rendering: -moz-crisp-edges;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: -o-crisp-edges;
+        image-rendering: pixelated;
+        -ms-interpolation-mode: nearest-neighbor;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+    <script type="text/javascript">
+      var Module = {
+        print: function(text) {
+          console.log(text);
+        },
+        printErr: function(text) {
+          console.error(text);
+        },
+        canvas: (function() {
+          var canvas = document.getElementById('canvas');
+          return canvas;
+        })()
+      };
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>
