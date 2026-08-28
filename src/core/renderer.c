@@ -101,9 +101,49 @@ void dh_renderer_draw_foundation_ui(const DHRenderer *renderer, const struct DHG
     DrawRectangle(0, 0, renderer->virtual_width, 18, (Color){10, 10, 14, 220});
     DrawText("DUNGEON HUNTER", 4, 4, 10, RAYWHITE);
 
-    char plat_info[64];
-    snprintf(plat_info, sizeof(plat_info), "[%s | 320x180 Virtual]", dh_platform_get_name());
-    DrawText(plat_info, 150, 4, 10, (Color){100, 200, 255, 255});
+    char plat_info[128];
+    snprintf(plat_info, sizeof(plat_info), "HP:%d/%d LV:%d XP:%d/%d GOLD:%d",
+             game->player.hp, game->player.max_hp, game->player.level,
+             game->player.xp, game->player.xp_to_next_level, game->player.gold_count);
+    DrawText(plat_info, 110, 4, 10, (Color){255, 220, 80, 255});
+
+    /* Level Up Banner Notification */
+    if (game->player.level_up_notify_timer > 0.0f) {
+        DrawRectangle(50, 46, 220, 24, (Color){15, 15, 25, 230});
+        DrawRectangleLines(50, 46, 220, 24, (Color){255, 220, 80, 255});
+        int text_w = MeasureText("LEVEL UP! (+1 HP, +1 DMG)", 10);
+        DrawText("LEVEL UP! (+1 HP, +1 DMG)", (renderer->virtual_width - text_w) / 2, 53, 10, (Color){255, 220, 80, 255});
+    }
+
+    /* Boss Battle Health Bar HUD Overlay */
+    dh_boss_manager_draw_hud(&game->boss_mgr, renderer->virtual_width, renderer->virtual_height);
+
+    /* Inventory & Shop Overlays */
+    dh_inventory_draw_ui(&game->inventory, renderer->virtual_width, renderer->virtual_height);
+    dh_shop_draw_ui(&game->shop, &game->player, renderer->virtual_width, renderer->virtual_height);
+
+    /* F8 Inventory & Save Debug Overlay */
+    if (game->show_inventory_debug) {
+        DrawRectangle(10, 24, 200, 48, (Color){ 10, 10, 15, 230 });
+        DrawRectangleLines(10, 24, 200, 48, (Color){ 80, 180, 220, 255 });
+        char dbg_buf[128];
+        snprintf(dbg_buf, sizeof(dbg_buf), "INV Count: %d/24 | WPN: +%d | ARM: +%d",
+                 game->inventory.count,
+                 dh_inventory_get_total_attack_bonus(&game->inventory),
+                 dh_inventory_get_total_hp_bonus(&game->inventory));
+        DrawText(dbg_buf, 14, 28, 8, (Color){ 255, 220, 100, 255 });
+        snprintf(dbg_buf, sizeof(dbg_buf), "Save Path: %s (STATUS: ACTIVE)", dh_save_get_path());
+        DrawText(dbg_buf, 14, 40, 8, (Color){ 100, 220, 120, 255 });
+    }
+
+    if (game->state == DH_STATE_PAUSED) {
+        DrawRectangle(0, 0, renderer->virtual_width, renderer->virtual_height, (Color){ 0, 0, 0, 140 });
+        int font_sz = 20;
+        int text_w = MeasureText("PAUSED", font_sz);
+        DrawText("PAUSED", (renderer->virtual_width - text_w) / 2, 70, font_sz, (Color){ 255, 220, 100, 255 });
+        text_w = MeasureText("Press P or ESC to Resume", 10);
+        DrawText("Press P or ESC to Resume", (renderer->virtual_width - text_w) / 2, 98, 10, RAYWHITE);
+    }
 
     DrawRectangle(0, 122, renderer->virtual_width, 58, (Color){12, 12, 18, 230});
     DrawLine(0, 122, renderer->virtual_width, 122, (Color){60, 60, 80, 255});
@@ -131,7 +171,7 @@ void dh_renderer_draw_foundation_ui(const DHRenderer *renderer, const struct DHG
     }
     DrawText(buf, 4, 150, 10, (Color){200, 200, 220, 255});
 
-    DrawText("A/D: Move | F2: Anim Demo | F3: Collision Debug", 4, 164, 10, (Color){140, 140, 160, 255});
+    DrawText("A/D: Move | SPACE: Attack | TAB: Inventory | E: Shop | F2-F8: Debug", 4, 164, 10, (Color){140, 140, 160, 255});
 }
 
 void dh_renderer_toggle_fullscreen(DHRenderer *renderer)

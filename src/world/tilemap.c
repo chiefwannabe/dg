@@ -151,18 +151,29 @@ static DHChunk *get_or_create_chunk(DHTilemap *tilemap, int chunk_idx)
         }
     }
 
-    /* 2. Find oldest/slot to recycle */
-    int slot_to_use = 0;
-    int min_dist = 999999;
+    /* 2. Find slot to recycle: prefer inactive, then furthest chunk outside active range */
+    int slot_to_use = -1;
+
     for (int i = 0; i < DH_MAX_ACTIVE_CHUNKS; i++) {
         if (!tilemap->active_chunks[i].active) {
             slot_to_use = i;
             break;
         }
-        if (tilemap->active_chunks[i].chunk_index < min_dist) {
-            min_dist = tilemap->active_chunks[i].chunk_index;
-            slot_to_use = i;
+    }
+
+    if (slot_to_use == -1) {
+        int max_dist = -1;
+        for (int i = 0; i < DH_MAX_ACTIVE_CHUNKS; i++) {
+            int dist = abs(tilemap->active_chunks[i].chunk_index - chunk_idx);
+            if (dist > max_dist) {
+                max_dist = dist;
+                slot_to_use = i;
+            }
         }
+    }
+
+    if (slot_to_use < 0 || slot_to_use >= DH_MAX_ACTIVE_CHUNKS) {
+        slot_to_use = 0;
     }
 
     generate_chunk_content(&tilemap->active_chunks[slot_to_use], chunk_idx);

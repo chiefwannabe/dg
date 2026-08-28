@@ -23,8 +23,10 @@ RAYLIB_DIR="${HOME}/raylib"
 RAYLIB_WEB_LIB=""
 if [ -f "${RAYLIB_DIR}/src/libraylib.web.a" ]; then
     RAYLIB_WEB_LIB="${RAYLIB_DIR}/src/libraylib.web.a"
-elif [ -f "${RAYLIB_DIR}/build/raylib/libraylib.a" ]; then
-    RAYLIB_WEB_LIB="${RAYLIB_DIR}/build/raylib/libraylib.a"
+elif [ -d "${RAYLIB_DIR}/src" ]; then
+    echo "Building Raylib Web library (libraylib.web.a)..."
+    (cd "${RAYLIB_DIR}/src" && emmake make PLATFORM=PLATFORM_WEB -B)
+    RAYLIB_WEB_LIB="${RAYLIB_DIR}/src/libraylib.web.a"
 fi
 
 RAYLIB_INC="${RAYLIB_DIR}/src"
@@ -39,8 +41,18 @@ elif [ -f "${RAYLIB_DIR}/src/minshell.html" ]; then
     SHELL_ARG="--shell-file ${RAYLIB_DIR}/src/minshell.html"
 fi
 
+# Package ONLY required runtime assets (under 500KB) instead of full 133MB source artwork
 PRELOAD_ARG=""
-if [ -d "${PROJECT_DIR}/assets" ]; then
+P1="assets/craftpix-net-436971-free-top-down-roguelike-game-kit-pixel-art/5Tiled_files"
+P2="assets/craftpix-net-788364-free-slime-mobs-pixel-art-top-down-sprite-pack/PNG/Slime1/With_shadow"
+P3="assets/craftpix-net-180537-free-swordsman-1-3-level-pixel-top-down-sprite-character/Tiled_files/Swordsman1"
+P4="assets/craftpix-net-788364-free-slime-mobs-pixel-art-top-down-sprite-pack/PNG/Slime2/With_shadow"
+P5="assets/craftpix-net-788364-free-slime-mobs-pixel-art-top-down-sprite-pack/PNG/Slime3/With_shadow"
+P6="assets/craftpix-net-180537-free-swordsman-1-3-level-pixel-top-down-sprite-character/Tiled_files/Swordsman3"
+
+if [ -d "${PROJECT_DIR}/${P1}" ] && [ -d "${PROJECT_DIR}/${P2}" ]; then
+    PRELOAD_ARG="--preload-file ${PROJECT_DIR}/${P1}@${P1} --preload-file ${PROJECT_DIR}/${P2}@${P2} --preload-file ${PROJECT_DIR}/${P3}@${P3} --preload-file ${PROJECT_DIR}/${P4}@${P4} --preload-file ${PROJECT_DIR}/${P5}@${P5} --preload-file ${PROJECT_DIR}/${P6}@${P6}"
+elif [ -d "${PROJECT_DIR}/assets" ]; then
     PRELOAD_ARG="--preload-file assets@assets"
 fi
 
@@ -60,6 +72,14 @@ emcc \
     src/core/animation.c \
     src/core/anim_demo.c \
     src/core/player.c \
+    src/core/enemy.c \
+    src/core/combat.c \
+    src/core/loot.c \
+    src/core/boss.c \
+    src/core/inventory.c \
+    src/core/shop.c \
+    src/core/save.c \
+    src/core/audio.c \
     src/world/tilemap.c \
     src/world/world.c \
     src/platform/web/platform_web.c \

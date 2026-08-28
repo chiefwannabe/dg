@@ -3,7 +3,7 @@ CMAKE ?= cmake
 BUILD_DIR := build
 WEB_BUILD_DIR := web-build
 
-.PHONY: all configure build run clean web serve android
+.PHONY: all configure build run clean web serve serve-web appimage android
 
 all: build
 
@@ -17,7 +17,7 @@ run: build
 	./$(BUILD_DIR)/dungeon-hunter
 
 clean:
-	rm -rf $(BUILD_DIR) $(WEB_BUILD_DIR)
+	rm -rf $(BUILD_DIR) $(WEB_BUILD_DIR) Dungeon-Hunter-x86_64.AppImage
 
 web:
 	./scripts/build-web.sh
@@ -25,5 +25,10 @@ web:
 serve: web
 	./scripts/serve-web.sh
 
+serve-web: serve
+
+appimage:
+	./scripts/build-appimage.sh
+
 android:
-	./scripts/build-android.sh
+	@echo "Android build target is deferred during the foundation repair phase."

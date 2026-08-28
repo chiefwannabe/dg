@@ -33,6 +33,14 @@ set(DH_SOURCES
     src/core/animation.c
     src/core/anim_demo.c
     src/core/player.c
+    src/core/enemy.c
+    src/core/combat.c
+    src/core/loot.c
+    src/core/boss.c
+    src/core/inventory.c
+    src/core/shop.c
+    src/core/save.c
+    src/core/audio.c
     src/world/tilemap.c
     src/world/world.c
     ${PLATFORM_SOURCE}

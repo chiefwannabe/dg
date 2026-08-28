@@ -1,5 +1,7 @@
 #include "dh/assets.h"
 #include "dh/logging.h"
+#include <raylib.h>
+#include <stdio.h>
 #include <string.h>
 
 bool dh_assets_init(DHAssetManager *assets)
@@ -12,6 +14,39 @@ bool dh_assets_init(DHAssetManager *assets)
 
     dh_log_info("Asset manager initialized");
     return true;
+}
+
+const char *dh_assets_get_resolved_path(const char *filepath, char *out_buf, size_t out_size)
+{
+    if (filepath == NULL || filepath[0] == '\0' || out_buf == NULL || out_size == 0) {
+        if (out_buf && out_size > 0) out_buf[0] = '\0';
+        return "";
+    }
+
+    /* 1. Direct path check (Current Working Directory or Absolute Path or Web Virtual FS) */
+    if (filepath[0] == '/' || FileExists(filepath)) {
+        snprintf(out_buf, out_size, "%s", filepath);
+        return out_buf;
+    }
+
+    /* 2. Executable Directory relative resolution (GetApplicationDirectory()) */
+    const char *app_dir = GetApplicationDirectory();
+    if (app_dir != NULL && app_dir[0] != '\0') {
+        snprintf(out_buf, out_size, "%s%s", app_dir, filepath);
+        if (FileExists(out_buf)) {
+            return out_buf;
+        }
+
+        /* 3. Check AppDir parent directory (e.g. app_dir/../assets/...) */
+        snprintf(out_buf, out_size, "%s../%s", app_dir, filepath);
+        if (FileExists(out_buf)) {
+            return out_buf;
+        }
+    }
+
+    /* Fallback to original filepath string */
+    snprintf(out_buf, out_size, "%s", filepath);
+    return out_buf;
 }
 
 Texture2D dh_assets_load_texture(DHAssetManager *assets, const char *filepath)
@@ -34,22 +69,24 @@ Texture2D dh_assets_load_texture(DHAssetManager *assets, const char *filepath)
         return empty;
     }
 
-    Texture2D tex = LoadTexture(filepath);
+    char resolved[512];
+    dh_assets_get_resolved_path(filepath, resolved, sizeof(resolved));
+
+    Texture2D tex = LoadTexture(resolved);
     if (tex.id == 0) {
-        dh_log_error("Failed to load texture from path: %s", filepath);
+        dh_log_error("Failed to load texture from path: %s (resolved: %s)", filepath, resolved);
         return tex;
     }
 
     SetTextureFilter(tex, TEXTURE_FILTER_POINT);
 
     int idx = assets->texture_count;
-    strncpy(assets->textures[idx].key, filepath, sizeof(assets->textures[idx].key) - 1);
-    assets->textures[idx].key[sizeof(assets->textures[idx].key) - 1] = '\0';
+    snprintf(assets->textures[idx].key, sizeof(assets->textures[idx].key), "%s", filepath);
     assets->textures[idx].texture = tex;
     assets->textures[idx].ref_count = 1;
     assets->texture_count++;
 
-    dh_log_info("Loaded sprite sheet texture: %s (%dx%d)", filepath, tex.width, tex.height);
+    dh_log_info("Loaded sprite sheet texture: %s [resolved: %s] (%dx%d)", filepath, resolved, tex.width, tex.height);
     return tex;
 }
 

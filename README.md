@@ -1,23 +1,80 @@
-# Dungeon Hunter — Engine Foundation
+# Dungeon Hunter v1.0.0 — Endless 2D Side-Scrolling Dungeon Game
 
-A lightweight, professional, cross-platform C11 + raylib 6.x foundation designed to target **Linux Desktop**, **Web (WebAssembly/WebGL)**, and **Android (APK)** from a single unified codebase.
-
-> [!IMPORTANT]
-> **ENGINE FOUNDATION ONLY:** This repository contains the core game engine architecture:
-> 1. Lifecycle state machine & time management
-> 2. **Pixel-Perfect Rendering & Virtual Resolution Scaling (320x180 base)**
-> 3. **2D Camera System (Smooth Follow, Boundary Clamping, Subpixel-Snapping)**
-> 4. **Coordinate Space Abstraction (Screen <-> Virtual <-> World)**
-> 5. **World & Tilemap Foundation with Frustum Culling**
-> 
-> **No gameplay (hero, monsters, combat, dungeons, items, progression) has been implemented yet.**
+A lightweight, professional, cross-platform 2D side-scrolling action platformer built in C11 and raylib 6.x. Targets **Linux Desktop**, **Linux AppImage**, and **Web (WebAssembly/WebGL)** from a single unified codebase.
 
 ---
 
-## 🏛️ Architecture
+## 🎮 Game Design & Core Loop
+
+**Dungeon Hunter** is an endless horizontal side-scrolling dungeon exploration game.
 
 ```text
-DG/
+EXPLORE → FIGHT MONSTERS → COLLECT GOLD & XP → LEVEL UP → BUY EQUIPMENT → DEFEAT BOSSES → CONTINUOUS ENDLESS WORLD
+```
+
+### Controls
+- **A**: Move Left / Backward
+- **D**: Move Right / Forward
+- **SPACE**: Sword Attack
+- **TAB**: Open / Close Inventory & Equipment UI
+- **E**: Interact with Merchant / Open Shop (when near Shop Merchant)
+- **1 – 9**: Select Inventory / Shop Item Slot
+- **ENTER**: Equip / Unequip Selected Item OR Buy Selected Shop Item
+- **P / ESC**: Pause Game (Closes popups first)
+
+*(Note: There is NO jumping and NO vertical movement. The hero explores horizontally along the dungeon plane.)*
+
+---
+
+## ⚔️ Game Features
+
+1. **Swordsman Hero & Combat**:
+   - 64x64 side-facing sprite animations (`Idle`, `Run`, `Attack`, `Hurt`, `Death`).
+   - Active sword attack hit window with single-hit registry and knockback impulse.
+2. **Endless Dungeon Environment**:
+   - 7-chunk active windowing with bidirectional chunk recycling.
+   - Parallax scrolling background layers and floor snapping physics.
+3. **Enemy Variety & Distance Difficulty Scaling**:
+   - **Green Slimes**: Fast basic mobs.
+   - **Red Orc Slimes**: Armored medium mobs.
+   - **Heavy Golem Slimes**: High HP, heavy damage brutes with strong knockback resistance.
+   - **Elite Variants**: Rare golden aura mobs with $1.8\times$ HP, $1.5\times$ damage, and $2.5\times$ rewards.
+4. **Dungeon Demon King Boss Encounters**:
+   - Deterministic milestone encounters (every 3000 world px / Chunk 15).
+   - 2-Phase battle logic with telegraph warning icons (`!` and `!!`) and horizontal arena encounter boundaries.
+5. **Progression & Leveling**:
+   - XP system with multi-threshold level up carryover protection.
+   - Leveling increases Max HP, restores current health, and boosts base Attack Damage.
+6. **Loot & RPG Equipment System**:
+   - Collectible gold coin pickups on floor.
+   - 24-slot inventory, Weapon Slot (+DMG), Armor Slot (+HP).
+   - Catalogs ranging from *Rusty Sword* to *Demon Blade* and *Cloth Armor* to *Demon Armor*.
+7. **World Shop Merchant**:
+   - Merchant Stand NPC stationed every 1500 world px for gear purchasing.
+8. **Local / Session Persistence**:
+   - Automatic binary save serialization (`save.dat`) on purchases, equip toggles, level ups, and boss defeats.
+   - Cross-platform file I/O (IndexedDB persistence on WebAssembly).
+9. **Procedural Audio Synthesis**:
+   - Built-in procedural SFX generator for attacks, hits, deaths, pickups, level ups, and boss rumbles.
+
+---
+
+## 🛠️ Debug Controls
+
+- **F2**: Toggle Animation Test Scene
+- **F3**: Toggle Tile Collision Debug Overlay
+- **F4**: Toggle Enemy Pool Debug Overlay
+- **F5**: Toggle Combat Hitbox Debug Overlay
+- **F6**: Toggle Progression & Loot Debug Overlay
+- **F7**: Toggle Boss System Debug Overlay
+- **F8**: Toggle Inventory & Save Debug Overlay
+
+---
+
+## 🏛️ Architecture & Project Structure
+
+```text
+dg/
 ├── include/dh/             # Public C headers
 │   ├── config.h            # Central configuration & virtual resolution settings
 │   ├── coords.h            # 3-tier coordinate system conversions
@@ -26,71 +83,36 @@ DG/
 │   ├── world.h             # World bounds & tilemap container
 │   ├── logging.h           # Cross-platform logging abstraction
 │   ├── time.h              # Clamped frame timing & delta time tracker
-│   ├── input.h             # Unified input state (Keyboard, Mouse, Gamepad, Touch Drag)
+│   ├── input.h             # Unified input state (A/D controls, pause, mouse)
 │   ├── renderer.h          # Virtual base canvas (320x180) & nearest-neighbor filter
 │   ├── game.h              # Central game lifecycle & state machine
-│   ├── assets.h            # Asset manager stubs (Textures, Audio, Fonts)
-│   └── platform.h          # Platform identification helpers
+│   ├── assets.h            # Centralized portable asset-root manager
+│   ├── animation.h         # Reusable animation system
+│   ├── player.h            # Hero state, movement, and platformer physics
+│   ├── enemy.h             # Multi-archetype enemy pool, scaling, and AI
+│   ├── combat.h            # Combat resolution & hit registry
+│   ├── loot.h              # Fixed pickup pool & gold collection
+│   ├── boss.h              # Milestone boss battle state machine & arena bounds
+│   ├── inventory.h         # Fixed inventory pool & equipment slots
+│   ├── shop.h              # World shop merchant & purchase logic
+│   ├── save.h              # Local binary save file serialization
+│   └── audio.h             # Procedural audio synthesis & SFX channels
 │
 ├── src/                    # Implementation
-│   ├── main.c              # Platform entry dispatcher (Desktop / Web / Android)
-│   ├── core/
-│   │   ├── camera.c        # 2D Camera logic with Lerp and subpixel snapping
-│   │   ├── coords.c        # Screen <-> Virtual <-> World coordinate math
-│   │   ├── game.c          # Game lifecycle & render dispatch
-│   │   ├── input.c         # Device input & click/touch drag panning
-│   │   ├── renderer.c      # Render-target scaling, offscreen pass, foundation UI
-│   │   ├── time.c          # Delta time calculation & frame counting
-│   │   ├── config.c        # Default application settings
-│   │   ├── logging.c       # Log routing (stdout/stderr / Android logcat)
-│   │   └── assets.c        # Safe asset loading/unloading foundation
-│   ├── world/
-│   │   ├── tilemap.c       # Tilemap storage, querying & frustum culling
-│   │   └── world.c         # World bounds & draw pipeline
-│   └── platform/
-│       ├── desktop/        # Linux / Desktop backend
-│       ├── web/            # Emscripten / WebAssembly backend
-│       └── android/        # Android NDK native backend
-│
-├── assets/                 # Asset directories (preserved via .gitkeep)
-│   ├── sprites/
-│   ├── tiles/
-│   ├── effects/
-│   ├── audio/
-│   └── fonts/
-│
-├── android/                # Android Gradle + NDK NativeActivity project
-│   ├── app/build.gradle
-│   ├── app/src/main/AndroidManifest.xml
-│   └── app/src/main/cpp/CMakeLists.txt
+│   ├── main.c              # Entry point dispatcher
+│   ├── core/               # Engine core modules
+│   ├── world/              # Endless world & chunk tilemap system
+│   └── platform/           # Platform backends (Desktop, Web, Android)
 │
 ├── scripts/                # Multi-platform build scripts
-│   ├── build-linux.sh      # Native Release build script
 │   ├── build-web.sh        # Emscripten WebAssembly compiler script
-│   ├── build-android.sh    # Android build launcher script
-│   └── serve-web.sh        # Local HTTP server helper for browser testing
-│
-├── .github/workflows/      # CI/CD Workflows
-│   ├── build-check.yml     # Pull-request Linux compilation check
-│   ├── appimage.yml        # Linux AppImage packager & artifact uploader
-│   ├── web.yml             # WebAssembly HTML5 artifact uploader
-│   └── android.yml         # Android release APK builder & uploader
+│   ├── serve-web.sh        # Local HTTP server helper for browser testing
+│   └── build-appimage.sh   # Self-contained Linux AppImage packager script
 │
 ├── CMakeLists.txt          # Native & cross-platform CMake build configuration
-├── Makefile                # Fast developer shortcut interface
-├── .gitignore
+├── Makefile                # Developer shortcut interface
 └── README.md
 ```
-
----
-
-## 🛠️ Tooling & Dependencies
-
-- **C Compiler**: GCC 13.3.0 / Clang (C11 standard enabled)
-- **Build Tools**: GNU Make 4.3+, CMake 3.20+
-- **Graphics Framework**: raylib 6.x (installed system-wide or sourced locally)
-- **Web Compiler**: Emscripten SDK (`emcc`)
-- **Mobile SDK**: Android NDK 26+ & Gradle 8+ / Java 17
 
 ---
 
@@ -99,61 +121,28 @@ DG/
 ### 1. Linux Desktop
 
 ```bash
-# Using Makefile
 make clean
 make
-make run
-
-# Or using CMake directly
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel
 ./build/dungeon-hunter
-
-# Or using script
-./scripts/build-linux.sh
 ```
-
----
 
 ### 2. Web (WebAssembly / WebGL)
 
-The web target compiles the identical C game logic into WebAssembly using Emscripten and raylib 6.x.
-
 ```bash
-# Build WebAssembly output to web-build/
 ./scripts/build-web.sh
-
-# Serve locally on http://localhost:8080
 ./scripts/serve-web.sh
+# Open http://localhost:8080 in browser
 ```
 
----
-
-### 3. Android (APK)
+### 3. Linux AppImage
 
 ```bash
-# Build Android release APK
-./scripts/build-android.sh
+./scripts/build-appimage.sh
+./Dungeon-Hunter-x86_64.AppImage
 ```
 
 ---
 
-### 4. Linux AppImage
+## 📜 License & Credits
 
-```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel
-```
-
----
-
-## 📐 Pixel-Perfect Rendering & Coordinate Systems
-
-- **Virtual Resolution**: Fixed **320x180** offscreen `RenderTexture2D` with `TEXTURE_FILTER_POINT` nearest-neighbor filtering.
-- **Aspect Ratio Letterboxing**: Dynamically fits any window aspect ratio with pillarbox/letterbox dark borders.
-- **Subpixel-Snapping Camera**: The 2D camera snaps position coordinates to integer pixels when rendering to eliminate tile gap lines and subpixel shimmer.
-- **Coordinate Spaces**:
-  - `Screen`: Physical window pixels (e.g. 1920x1080).
-  - `Virtual`: Offscreen viewport coordinates (0..320, 0..180).
-  - `World`: Global tilemap coordinates (0..1024, 0..1024).
-- **Frustum Culling**: Tilemap renderer calculates visible tile range `[min_x..max_x, min_y..max_y]` based on current camera view frustum, rendering only visible tiles.
+Developed with C11 & raylib 6.x. Artwork assets provided via CraftPix pixel-art sprite packs.

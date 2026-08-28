@@ -22,6 +22,8 @@ jobs:
       - name: Clone Raylib 6.x
         run: |
           git clone --depth 1 --branch 6.0.0 https://github.com/raysan5/raylib.git ~/raylib
+          cd ~/raylib/src
+          emmake make PLATFORM=PLATFORM_WEB -B
 
       - name: Build WebAssembly
         run: |

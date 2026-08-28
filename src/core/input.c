@@ -33,32 +33,23 @@ void dh_input_update(DHInput *input, int virtual_width, int virtual_height, floa
         return;
     }
 
+    bool prev_down[DH_INPUT_COUNT];
     for (int i = 0; i < DH_INPUT_COUNT; i++) {
+        prev_down[i] = input->down[i];
         input->pressed[i] = false;
         input->released[i] = false;
     }
 
-    bool key_up = IsKeyDown(KEY_UP) || IsKeyDown(KEY_W);
-    bool key_down = IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S);
+    /* Gameplay controls: A/D move horizontally. W/S do NOT move player. */
+    bool key_up = IsKeyDown(KEY_UP);
+    bool key_down = IsKeyDown(KEY_DOWN);
     bool key_left = IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A);
     bool key_right = IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D);
 
-    bool key_up_pressed = IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W);
-    bool key_down_pressed = IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S);
-    bool key_left_pressed = IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A);
-    bool key_right_pressed = IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D);
-
     bool act_primary = IsKeyDown(KEY_SPACE) || IsKeyDown(KEY_ENTER) || IsKeyDown(KEY_Z);
-    bool act_primary_pressed = IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_Z);
-
     bool act_secondary = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_X);
-    bool act_secondary_pressed = IsKeyPressed(KEY_LEFT_SHIFT) || IsKeyPressed(KEY_RIGHT_SHIFT) || IsKeyPressed(KEY_X);
-
     bool pause_btn = IsKeyDown(KEY_ESCAPE) || IsKeyDown(KEY_P);
-    bool pause_btn_pressed = IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_P);
-
     bool reset_cam = IsKeyDown(KEY_R);
-    bool reset_cam_pressed = IsKeyPressed(KEY_R);
 
     if (IsGamepadAvailable(0)) {
         float stick_x = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_X);
@@ -79,32 +70,25 @@ void dh_input_update(DHInput *input, int virtual_width, int virtual_height, floa
         if (IsGamepadButtonDown(0, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) key_right = true;
 
         if (IsGamepadButtonDown(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN)) act_primary = true;
-        if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN)) act_primary_pressed = true;
-
         if (IsGamepadButtonDown(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT)) act_secondary = true;
-        if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT)) act_secondary_pressed = true;
-
         if (IsGamepadButtonDown(0, GAMEPAD_BUTTON_MIDDLE_RIGHT)) pause_btn = true;
-        if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_MIDDLE_RIGHT)) pause_btn_pressed = true;
     }
 
-    input->down[DH_INPUT_UP] = key_up;
-    input->down[DH_INPUT_DOWN] = key_down;
-    input->down[DH_INPUT_LEFT] = key_left;
-    input->down[DH_INPUT_RIGHT] = key_right;
-    input->down[DH_INPUT_ACTION_PRIMARY] = act_primary;
-    input->down[DH_INPUT_ACTION_SECONDARY] = act_secondary;
-    input->down[DH_INPUT_PAUSE] = pause_btn;
-    input->down[DH_INPUT_RESET_CAM] = reset_cam;
+    bool new_down[DH_INPUT_COUNT];
+    new_down[DH_INPUT_UP] = key_up;
+    new_down[DH_INPUT_DOWN] = key_down;
+    new_down[DH_INPUT_LEFT] = key_left;
+    new_down[DH_INPUT_RIGHT] = key_right;
+    new_down[DH_INPUT_ACTION_PRIMARY] = act_primary;
+    new_down[DH_INPUT_ACTION_SECONDARY] = act_secondary;
+    new_down[DH_INPUT_PAUSE] = pause_btn;
+    new_down[DH_INPUT_RESET_CAM] = reset_cam;
 
-    input->pressed[DH_INPUT_UP] = key_up_pressed;
-    input->pressed[DH_INPUT_DOWN] = key_down_pressed;
-    input->pressed[DH_INPUT_LEFT] = key_left_pressed;
-    input->pressed[DH_INPUT_RIGHT] = key_right_pressed;
-    input->pressed[DH_INPUT_ACTION_PRIMARY] = act_primary_pressed;
-    input->pressed[DH_INPUT_ACTION_SECONDARY] = act_secondary_pressed;
-    input->pressed[DH_INPUT_PAUSE] = pause_btn_pressed;
-    input->pressed[DH_INPUT_RESET_CAM] = reset_cam_pressed;
+    for (int i = 0; i < DH_INPUT_COUNT; i++) {
+        input->pressed[i] = (!prev_down[i] && new_down[i]);
+        input->released[i] = (prev_down[i] && !new_down[i]);
+        input->down[i] = new_down[i];
+    }
 
     input->move_x = (float)input->down[DH_INPUT_RIGHT] - (float)input->down[DH_INPUT_LEFT];
     input->move_y = 0.0f; /* Side-scrolling platformer: W/S do NOT move player vertically */

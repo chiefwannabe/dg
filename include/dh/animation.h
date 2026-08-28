@@ -21,6 +21,8 @@ typedef enum {
     DH_DIR_UP,
     DH_DIR_LEFT,
     DH_DIR_RIGHT,
+    DH_DIR_SIDE_LEFT,
+    DH_DIR_SIDE_RIGHT,
     DH_DIR_COUNT
 } DHDirection;
 

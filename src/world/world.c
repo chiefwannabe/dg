@@ -1,6 +1,7 @@
 #include "dh/world.h"
 #include "dh/logging.h"
 #include <raylib.h>
+#include <math.h>
 #include <stddef.h>
 
 bool dh_world_init(DHWorld *world, int tile_size, DHAssetManager *assets)
@@ -37,5 +38,23 @@ void dh_world_draw(DHWorld *world, const DHCamera2D *camera, int virtual_w, int 
 {
     if (world == NULL || camera == NULL) return;
 
+    /* 1. Deep Dungeon Ambient Atmosphere Clear */
+    ClearBackground((Color){ 12, 14, 22, 255 });
+
+    /* 2. Parallax Background Dungeon Wall Arches (moves at 30% camera speed) */
+    float bg_parallax_x = camera->position.x * 0.3f;
+    int bg_spacing = 64;
+    int start_i = (int)floorf((camera->position.x - (float)virtual_w) / (float)bg_spacing);
+    int end_i = (int)ceilf((camera->position.x + (float)virtual_w) / (float)bg_spacing);
+
+    for (int i = start_i; i <= end_i; i++) {
+        float x = (float)(i * bg_spacing) - fmodf(bg_parallax_x, (float)bg_spacing);
+        /* Draw subtle background stone pillar archways */
+        DrawRectangle((int)x + 8, 16, 16, 144, (Color){ 20, 24, 38, 255 });
+        DrawRectangle((int)x + 6, 12, 20, 8, (Color){ 28, 32, 48, 255 });
+        DrawCircle((int)x + 16, 20, 6.0f, (Color){ 10, 12, 20, 255 });
+    }
+
+    /* 3. Playable Tilemap & Props Pass */
     dh_tilemap_draw(&world->tilemap, camera, virtual_w, virtual_h, show_collision_debug, out_visible_tiles);
 }

@@ -1,5 +1,6 @@
 #include "dh/animation.h"
 #include "dh/logging.h"
+#include <stdio.h>
 #include <string.h>
 
 bool dh_animation_clip_create_grid(DHAnimationClip *clip,
@@ -14,17 +15,34 @@ bool dh_animation_clip_create_grid(DHAnimationClip *clip,
                                    bool looping,
                                    bool horizontal)
 {
-    if (clip == NULL || frame_count <= 0 || frame_count > DH_MAX_ANIM_FRAMES) {
+    if (clip == NULL) {
         return false;
     }
 
     memset(clip, 0, sizeof(DHAnimationClip));
 
+    if (frame_count <= 0 || frame_count > DH_MAX_ANIM_FRAMES ||
+        frame_width <= 0 || frame_height <= 0 ||
+        start_x < 0 || start_y < 0) {
+        dh_log_error("Invalid animation clip parameters: count=%d, size=%dx%d, start=(%d,%d)",
+                     frame_count, frame_width, frame_height, start_x, start_y);
+        return false;
+    }
+
+    if (texture.id != 0 && texture.width > 0 && texture.height > 0) {
+        int max_x = start_x + (horizontal ? (frame_count * frame_width) : frame_width);
+        int max_y = start_y + (horizontal ? frame_height : (frame_count * frame_height));
+        if (max_x > texture.width || max_y > texture.height) {
+            dh_log_error("Animation clip dimensions (%dx%d) exceed texture size (%dx%d)",
+                         max_x, max_y, texture.width, texture.height);
+            return false;
+        }
+    }
+
     if (name != NULL) {
-        strncpy(clip->name, name, sizeof(clip->name) - 1);
-        clip->name[sizeof(clip->name) - 1] = '\0';
+        snprintf(clip->name, sizeof(clip->name), "%s", name);
     } else {
-        strcpy(clip->name, "unnamed");
+        snprintf(clip->name, sizeof(clip->name), "unnamed");
     }
 
     clip->texture = texture;
@@ -98,14 +116,25 @@ static void resolve_active_clip(const DHAnimationController *controller,
         }
     }
 
-    // 2. Fallback direction for requested state (e.g. DOWN)
+    // 2. Side-scrolling platformer direction mapping (SIDE_LEFT -> SIDE_RIGHT, LEFT -> RIGHT)
+    if (dir == DH_DIR_SIDE_LEFT && controller->clip_valid[state][DH_DIR_SIDE_RIGHT]) {
+        *out_dir = DH_DIR_SIDE_RIGHT;
+        *out_clip = &controller->clips[state][DH_DIR_SIDE_RIGHT];
+        return;
+    }
+    if (dir == DH_DIR_LEFT && controller->clip_valid[state][DH_DIR_RIGHT]) {
+        *out_dir = DH_DIR_RIGHT;
+        *out_clip = &controller->clips[state][DH_DIR_RIGHT];
+        return;
+    }
+
+    // 3. Fallback direction for requested state (e.g. DOWN or RIGHT)
     if (state >= 0 && state < DH_ANIM_STATE_COUNT) {
         if (controller->clip_valid[state][DH_DIR_DOWN]) {
             *out_dir = DH_DIR_DOWN;
             *out_clip = &controller->clips[state][DH_DIR_DOWN];
             return;
         }
-        // Search any valid direction for this state
         for (int d = 0; d < DH_DIR_COUNT; d++) {
             if (controller->clip_valid[state][d]) {
                 *out_dir = (DHDirection)d;
@@ -115,7 +144,7 @@ static void resolve_active_clip(const DHAnimationController *controller,
         }
     }
 
-    // 3. Fallback to IDLE state
+    // 4. Fallback to IDLE state
     if (controller->clip_valid[DH_ANIM_STATE_IDLE][dir]) {
         *out_state = DH_ANIM_STATE_IDLE;
         *out_clip = &controller->clips[DH_ANIM_STATE_IDLE][dir];
@@ -128,7 +157,7 @@ static void resolve_active_clip(const DHAnimationController *controller,
         return;
     }
 
-    // 4. Any valid clip at all
+    // 5. Any valid clip at all
     for (int s = 0; s < DH_ANIM_STATE_COUNT; s++) {
         for (int d = 0; d < DH_DIR_COUNT; d++) {
             if (controller->clip_valid[s][d]) {
@@ -294,6 +323,9 @@ void dh_animation_draw(const DHAnimationController *controller, Vector2 position
     }
 
     Rectangle src = clip->frames[frame_idx].frame_rect;
+    if (controller->current_dir == DH_DIR_SIDE_LEFT && resolved_dir != DH_DIR_SIDE_LEFT) {
+        src.width = -src.width;
+    }
     DrawTextureRec(clip->texture, src, position, tint);
 }
 
@@ -323,6 +355,9 @@ void dh_animation_draw_pro(const DHAnimationController *controller,
     }
 
     Rectangle src = clip->frames[frame_idx].frame_rect;
+    if (controller->current_dir == DH_DIR_SIDE_LEFT && resolved_dir != DH_DIR_SIDE_LEFT) {
+        src.width = -src.width;
+    }
     DrawTexturePro(clip->texture, src, dest_rect, origin, rotation, tint);
 }
 
@@ -342,10 +377,12 @@ const char *dh_anim_state_to_string(DHAnimState state)
 const char *dh_direction_to_string(DHDirection dir)
 {
     switch (dir) {
-    case DH_DIR_DOWN:  return "DOWN";
-    case DH_DIR_UP:    return "UP";
-    case DH_DIR_LEFT:  return "LEFT";
-    case DH_DIR_RIGHT: return "RIGHT";
-    default:           return "UNKNOWN";
+    case DH_DIR_DOWN:       return "DOWN";
+    case DH_DIR_UP:         return "UP";
+    case DH_DIR_LEFT:       return "LEFT";
+    case DH_DIR_RIGHT:      return "RIGHT";
+    case DH_DIR_SIDE_LEFT:  return "SIDE_LEFT";
+    case DH_DIR_SIDE_RIGHT: return "SIDE_RIGHT";
+    default:                return "UNKNOWN";
     }
 }
